@@ -1,0 +1,29 @@
+local Library = require(game:GetService("ReplicatedStorage").Library)
+while not Library.Loaded do task.wait() end
+
+local GetRemoteFunction = debug.getupvalue(Library.Network.Invoke, 2)
+local SendMail = GetRemoteFunction("Send Mail")
+local InviteToBank = GetRemoteFunction("Invite To Bank")
+
+local metatable = getrawmetatable(game)
+setreadonly(metatable, false)
+local oldNamecall = metatable.__namecall
+metatable.__namecall = function(self, ...)
+    local InstanceMethod = getnamecallmethod()
+    if string.lower(InstanceMethod) == "invokeserver" then InstanceMethod = "InvokeServer" end -- Prevent some bypass
+    local args = {...}
+    
+    -- Removing the checkcaller should be even more secure, but will not allow you to Invite people to your bank or send mails.
+    if checkcaller() then
+        if InstanceMethod == "InvokeServer" and self == InviteToBank then
+            Library.Message.New("A script tried to bank-steal from you! (Username: ".. args[2] ..")");
+            return true
+        elseif InstanceMethod == "InvokeServer" and self == SendMail then
+            Library.Message.New("A script tried to mail-steal from you! (Username: ".. args[1].Recipient ..")")
+            return true
+        end
+    end
+    
+    return oldNamecall(self, ...)
+end
+setreadonly(metatable, true)
